@@ -1,4 +1,3 @@
-#include "register.h"
 #include "label.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -16,13 +15,11 @@ int number_of_labels(struct Label** label_array){
 }
 
 char* interpret(const char* assembly_program){
-	struct Register* reg_array[26];
+	int registers[26];
 	struct Label* labels[MAX_LABELS];
 	//initialize all of the registers
 	for (int i=0;i<26;i++){
-		reg_array[i]=malloc(sizeof(struct Register));
-		reg_array[i]->key=(char)(i+97);
-		reg_array[i]->value=0;
+		registers[i]=0;
 	}
 	//initialize all of the label indices
 	for (int i=0;i<50;i++){
@@ -34,9 +31,9 @@ char* interpret(const char* assembly_program){
 	//TODO: interpret instructions and operands
 	//and run program
 
-	//free the memory allocated to the registers
-	for (int i=0;i<26;i++){
-		free(reg_array[i]);
+	//free the memory allocated to the labels
+	for (int i=0;i<50;i++){
+		free(labels[i]);
 	}
 	return 0;
 }
