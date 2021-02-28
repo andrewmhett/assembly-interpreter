@@ -1,4 +1,4 @@
-struct Label{
+typedef struct Label{
 	char* name;
-	int line;
-};
+	int position;
+} Label;
