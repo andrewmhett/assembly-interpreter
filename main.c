@@ -32,21 +32,18 @@ int* lookup_reg(char reg_name, int** registers){
 
 char* interpret(char* assembly_program){
 	char* output = malloc(100);
-	//allocate memory for the registers
 	int* registers[26];
-	Label* labels[50];
+	Label labels[50];
 	//initialize all of the registers
 	for (int i=0;i<26;i++){
 		registers[i] = malloc(sizeof(int));
 		move(0,registers[i]);
 	}
-	printf("REGISTERS INITIALIZED\n");
 	//initialize all of the label indices
 	for (int i=0;i<50;i++){
-		labels[i]=malloc(sizeof(Label));
 		char empty[50];
-		labels[i]->name=empty;
-		labels[i]->position=-1;
+		labels[i].name=empty;
+		labels[i].position=-1;
 	}
 	int program_length = 1;
 	for (int i=0;i<strlen(assembly_program);i++){
@@ -67,14 +64,13 @@ char* interpret(char* assembly_program){
 		lines[line][char_position] = assembly_program[i];
 		char_position++;
 	}
-	printf("%d LINE%s PARSED\n",program_length,(program_length != 1) ? "S" : "");
 	int num_labels = 0;
 	for (int i=0;i<program_length;i++){
 		if (lines[i][strlen(lines[i])-1]==':'){
 			for (int o=0;o<strlen(lines[i])-1;o++){
-				labels[num_labels]->name[o]=lines[i][o];
+				labels[num_labels].name[o]=lines[i][o];
 			}
-			labels[num_labels]->position=i;
+			labels[num_labels].position=i;
 			num_labels++;
 		}
 	}
@@ -82,7 +78,7 @@ char* interpret(char* assembly_program){
 	for (int i=0;i<program_length;i++){
 		char* current_line = lines[i];
 		if (current_line[strlen(current_line)-1] != ':' && current_line[0] != ';'){
-			char* segments[10];
+			char segments[10][20];
 			int segment = 0;
 			int char_position = 0;
 			for (int o=0;o<strlen(current_line);o++){
@@ -96,17 +92,24 @@ char* interpret(char* assembly_program){
 				char_position++;
 			}
 			if (!validate_instruction(segments[0])){
-				exit(-1);
+				break;
 			}
 			switch(lookup_instruction(segments[0])){
 				case MOV:
 					if (is_register_name(segments[1])){
 						move(*lookup_reg(segments[1][0], registers),lookup_reg(segments[2][0], registers));
 					}else{
-						move((int)segments[1],lookup_reg(segments[2][0], registers));
+						int value = atoi(segments[1]);
+						move(value,lookup_reg(segments[2][0], registers));
 					}
 					break;
 				case ADD:
+					if (is_register_name(segments[1])){
+						add(*lookup_reg(segments[1][0], registers),lookup_reg(segments[2][0], registers));
+					}else{
+						int value = atoi(segments[1]);
+						add(value,lookup_reg(segments[2][0], registers));
+					}
 					break;
 				case SUB:
 					break;
@@ -130,10 +133,6 @@ char* interpret(char* assembly_program){
 		}
 	}
 
-	//free the memory allocated to the labels
-	for (int i=0;i<50;i++){
-		free(labels[i]);
-	}
 	//free the memory allocated to the registers
 	for (int i=0;i<26;i++){
 		free(registers[i]);
@@ -144,7 +143,7 @@ char* interpret(char* assembly_program){
 int main(){
 	//TODO: parse argv input and 
 	//pass program as a const char*
-	char* output = interpret("top:\nadd a 1\nadd b 2\nadd 3 c\nmsg a, b, c");
+	char* output = interpret("top:\nmov 1 a\nadd 1 a\nadd 2 b\nadd 3 c\nmsg a, b, c");
 	printf("%s",output);
 	free(output);
 	return 0;
