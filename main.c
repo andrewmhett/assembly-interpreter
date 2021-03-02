@@ -141,12 +141,34 @@ void interpret(const char* assembly_program){
 					}
 					break;
 				case SUB:
+					if (is_register_name(segments[1])){
+						subtract(*lookup_reg(segments[1][0], registers),lookup_reg(segments[2][0], registers));
+					}else{
+						int value = atoi(segments[1]);
+						subtract(value,lookup_reg(segments[2][0], registers));
+					}
 					break;
 				case MUL:
+					if (is_register_name(segments[1])){
+						multiply(*lookup_reg(segments[1][0], registers),lookup_reg(segments[2][0], registers));
+					}else{
+						int value = atoi(segments[1]);
+						multiply(value,lookup_reg(segments[2][0], registers));
+					}
 					break;
 				case DIV:
+					if (is_register_name(segments[1])){
+						divide(*lookup_reg(segments[1][0], registers),lookup_reg(segments[2][0], registers));
+					}else{
+						int value = atoi(segments[1]);
+						divide(value,lookup_reg(segments[2][0], registers));
+					}
 					break;
 				case JMP:
+					if (lookup_label_position(segments[1], labels) >= 0){
+						i--;
+						i=lookup_label_position(segments[1], labels);
+					}
 					break;
 				case CMP:
 					if (is_register_name(segments[1])){
