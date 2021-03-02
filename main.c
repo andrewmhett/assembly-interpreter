@@ -4,6 +4,9 @@
 #include "label.h"
 #include "instructions.h"
 
+#define MAX_LABELS 50
+#define MAX_LINE_LENGTH 150
+
 char instructions[NUM_INSTRUCTIONS][4]={"mov","add","sub","mul","div","jmp","cmp","jlt","jgt","jet","jro","msg"};
 
 int validate_instruction(char* instruction){
@@ -32,7 +35,7 @@ int* lookup_reg(char reg_name, int** registers){
 
 int lookup_label_position(char* name, Label** labels){
 	int position = -1;
-	for (int i=0;i<50;i++){
+	for (int i=0;i<MAX_LABELS;i++){
 		if (strcmp(labels[i]->name,name)==0){
 			position = labels[i]->position;
 			break;
@@ -43,14 +46,14 @@ int lookup_label_position(char* name, Label** labels){
 
 void interpret(const char* assembly_program){
 	int* registers[26];
-	Label* labels[50];
+	Label* labels[MAX_LABELS];
 	//initialize all of the registers
 	for (int i=0;i<26;i++){
 		registers[i] = malloc(sizeof(int));
 		move(0,registers[i]);
 	}
 	//initialize all of the label indices
-	for (int i=0;i<50;i++){
+	for (int i=0;i<MAX_LABELS;i++){
 		labels[i] = malloc(sizeof(Label));
 		char* name = malloc(30);
 		labels[i]->name=name;
@@ -62,15 +65,17 @@ void interpret(const char* assembly_program){
 			program_length++;
 		}
 	}
-	char lines[program_length][50];
+	char lines[program_length][MAX_LINE_LENGTH];
 	int line = 0;
 	int char_position = 0;
 	for (int i=0;i<strlen(assembly_program);i++){
 		if (assembly_program[i]=='\n'){
 			lines[line][char_position]='\0';
-			line++;
+			while (assembly_program[i] == '\n'){
+				i++;
+				line++;
+			}
 			char_position=0;
-			i++;
 		}
 		lines[line][char_position] = assembly_program[i];
 		char_position++;
@@ -90,7 +95,7 @@ void interpret(const char* assembly_program){
 	for (int i=0;i<program_length;i++){
 		char* current_line = lines[i];
 		int within_quotes = 0;
-		if (current_line[strlen(current_line)-1] != ':' && current_line[0] != ';'){
+		if (current_line[strlen(current_line)-1] != ':' && current_line[0] != ';' && strlen(current_line)>1){
 			char segments[10][20];
 			int num_segments = 0;
 			int char_position = 0;
@@ -203,7 +208,7 @@ void interpret(const char* assembly_program){
 		free(registers[i]);
 	}
 	//free the memory allocated to the labels
-	for (int i=0;i<50;i++){
+	for (int i=0;i<MAX_LABELS;i++){
 		free(labels[i]->name);
 		free(labels[i]);
 	}
