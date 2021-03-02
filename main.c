@@ -30,9 +30,19 @@ int* lookup_reg(char reg_name, int** registers){
 	return registers[(int)reg_name-97];
 }
 
+Label* lookup_label(char* name, Label** labels){
+	Label* ret_label;
+	for (int i=0;i<50;i++){
+		if (strcmp(labels[i]->name,name)==0){
+			ret_label = labels[i];
+		}
+	}
+	return ret_label;
+}
+
 void interpret(const char* assembly_program){
 	int* registers[26];
-	Label labels[50];
+	Label* labels[50];
 	//initialize all of the registers
 	for (int i=0;i<26;i++){
 		registers[i] = malloc(sizeof(int));
@@ -40,9 +50,10 @@ void interpret(const char* assembly_program){
 	}
 	//initialize all of the label indices
 	for (int i=0;i<50;i++){
+		labels[i] = malloc(sizeof(Label));
 		char empty[50];
-		labels[i].name=empty;
-		labels[i].position=-1;
+		labels[i]->name=empty;
+		labels[i]->position=-1;
 	}
 	int program_length = 1;
 	for (int i=0;i<strlen(assembly_program);i++){
@@ -67,12 +78,13 @@ void interpret(const char* assembly_program){
 	for (int i=0;i<program_length;i++){
 		if (lines[i][strlen(lines[i])-1]==':'){
 			for (int o=0;o<strlen(lines[i])-1;o++){
-				labels[num_labels].name[o]=lines[i][o];
+				labels[num_labels]->name[o]=lines[i][o];
 			}
-			labels[num_labels].position=i;
+			labels[num_labels]->position=i;
 			num_labels++;
 		}
 	}
+	int comparison_diff = 0;
 	for (int i=0;i<program_length;i++){
 		char* current_line = lines[i];
 		int within_quotes = 0;
@@ -102,6 +114,8 @@ void interpret(const char* assembly_program){
 			if (!validate_instruction(segments[0])){
 				break;
 			}
+			int first_value = 0;
+			int second_value = 0;
 			switch(lookup_instruction(segments[0])){
 				case MOV:
 					if (is_register_name(segments[1])){
@@ -128,8 +142,23 @@ void interpret(const char* assembly_program){
 				case JMP:
 					break;
 				case CMP:
+					if (is_register_name(segments[1])){
+						first_value = *lookup_reg(segments[1][0], registers);
+					}else{
+						first_value = atoi(segments[1]);
+					}
+					if (is_register_name(segments[2])){
+						second_value = *lookup_reg(segments[2][0], registers);
+					}else{
+						second_value = atoi(segments[2]);
+					}
+					comparison_diff = first_value - second_value;
 					break;
 				case JLT:
+					if (comparison_diff<0){
+						i--;
+						i=lookup_label(segments[1], labels)->position;
+					}
 					break;
 				case JGT:
 					break;
@@ -156,6 +185,10 @@ void interpret(const char* assembly_program){
 	//free the memory allocated to the registers
 	for (int i=0;i<26;i++){
 		free(registers[i]);
+	}
+	//free the memory allocated to the labels
+	for (int i=0;i<50;i++){
+		free(labels[i]);
 	}
 }
 
