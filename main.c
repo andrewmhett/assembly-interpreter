@@ -30,8 +30,7 @@ int* lookup_reg(char reg_name, int** registers){
 	return registers[(int)reg_name-97];
 }
 
-char* interpret(char* assembly_program){
-	char* output = malloc(100);
+void interpret(const char* assembly_program){
 	int* registers[26];
 	Label labels[50];
 	//initialize all of the registers
@@ -74,23 +73,32 @@ char* interpret(char* assembly_program){
 			num_labels++;
 		}
 	}
-	printf("%d LABEL%s PARSED\n",num_labels,(num_labels != 1) ? "S" : "");
 	for (int i=0;i<program_length;i++){
 		char* current_line = lines[i];
+		int within_quotes = 0;
 		if (current_line[strlen(current_line)-1] != ':' && current_line[0] != ';'){
 			char segments[10][20];
-			int segment = 0;
+			int num_segments = 0;
 			int char_position = 0;
-			for (int o=0;o<strlen(current_line);o++){
-				if (current_line[o] == ' '){
-					segments[segment][char_position]='\0';
-					segment++;
-					o++;
+			int skip = 0;
+			for (int o=0;o<strlen(current_line)+1;o++){
+				skip = 0;
+				if (current_line[o] == ' ' && !within_quotes){
+					skip=1;
+					segments[num_segments][char_position]='\0';
+					num_segments++;
 					char_position=0;
 				}
-				segments[segment][char_position]=current_line[o];
-				char_position++;
+				if (current_line[o] == '\"'){
+					skip=1;
+					within_quotes = !within_quotes;
+				}
+				if (!skip){
+					segments[num_segments][char_position]=current_line[o];
+					char_position++;
+				}
 			}
+			num_segments++;
 			if (!validate_instruction(segments[0])){
 				break;
 			}
@@ -128,6 +136,14 @@ char* interpret(char* assembly_program){
 				case JET:
 					break;
 				case MSG:
+					for (int i=1;i<num_segments;i++){
+						if (is_register_name(segments[i])){
+							printf("%d",*lookup_reg(segments[i][0], registers));
+						}else{
+							printf("%s",segments[i]);
+						}
+					}
+					printf("%c",'\n');
 					break;
 			}
 		}
@@ -137,14 +153,30 @@ char* interpret(char* assembly_program){
 	for (int i=0;i<26;i++){
 		free(registers[i]);
 	}
-	return output;
 }
 
-int main(){
-	//TODO: parse argv input and 
-	//pass program as a const char*
-	char* output = interpret("top:\nmov 1 a\nadd 1 a\nadd 2 b\nadd 3 c\nmsg a, b, c");
-	printf("%s",output);
-	free(output);
-	return 0;
+int main(int c, const char* argv[]){
+	char * assembly_input = 0;
+	long length;
+	if (c>0){
+		FILE * f = fopen(argv[1], "rb");
+		if (f){
+			fseek(f,0,SEEK_END);
+			length = ftell(f);
+			fseek(f,0,SEEK_SET);
+			assembly_input = malloc(length);
+			if (assembly_input){
+				fread(assembly_input, 1, length, f);
+			}
+			fclose(f);
+			if (assembly_input){
+				interpret(assembly_input);
+			}
+			free(assembly_input);
+		}else{
+			interpret(argv[1]);
+		}
+		return 0;
+	}
+	return -1;
 }
