@@ -6,6 +6,7 @@
 
 #define MAX_LABELS 50
 #define MAX_LINE_LENGTH 150
+#define MAX_LABEL_LENGTH 30
 
 char instructions[NUM_INSTRUCTIONS][4]={"mov","add","sub","mul","div","jmp","cmp","jlt","jgt","jet","jro","msg"};
 
@@ -44,7 +45,7 @@ int lookup_label_position(char* name, Label** labels){
 	return position;
 }
 
-void interpret(const char* assembly_program){
+void interpret(const char* unfiltered_assembly_program){
 	int* registers[26];
 	Label* labels[MAX_LABELS];
 	//initialize all of the registers
@@ -55,10 +56,31 @@ void interpret(const char* assembly_program){
 	//initialize all of the label indices
 	for (int i=0;i<MAX_LABELS;i++){
 		labels[i] = malloc(sizeof(Label));
-		char* name = malloc(30);
+		char* name = malloc(MAX_LABEL_LENGTH);
 		labels[i]->name=name;
 		labels[i]->position=-1;
 	}
+	int char_position = 0;
+	char assembly_program[strlen(unfiltered_assembly_program)];
+	int newline = 0;
+	//Loop through all of the characters in the program
+	//and remove chains of \n
+	for (int i=0;i<strlen(unfiltered_assembly_program);i++){
+		newline = 0;
+		while (unfiltered_assembly_program[i] == '\n' && unfiltered_assembly_program[i+1] == '\n'){
+			i++;
+			newline = 1;
+		}
+		if (newline){
+			assembly_program[char_position]='\n';
+			i++;
+			char_position++;
+		}
+		assembly_program[char_position]=unfiltered_assembly_program[i];
+		char_position++;
+	}
+	//Count the number of \n characters to find
+	//the program's length
 	int program_length = 1;
 	for (int i=0;i<strlen(assembly_program);i++){
 		if (assembly_program[i]=='\n'){
@@ -67,14 +89,12 @@ void interpret(const char* assembly_program){
 	}
 	char lines[program_length][MAX_LINE_LENGTH];
 	int line = 0;
-	int char_position = 0;
+	char_position = 0;
 	for (int i=0;i<strlen(assembly_program);i++){
 		if (assembly_program[i]=='\n'){
 			lines[line][char_position]='\0';
-			while (assembly_program[i] == '\n'){
-				i++;
-				line++;
-			}
+			i++;
+			line++;
 			char_position=0;
 		}
 		lines[line][char_position] = assembly_program[i];
@@ -94,134 +114,136 @@ void interpret(const char* assembly_program){
 	int comparison_diff = 0;
 	for (int i=0;i<program_length;i++){
 		char* current_line = lines[i];
+		while (strlen(current_line) <= 1 || current_line[0] == ';' || current_line[strlen(current_line)-1]==':'){
+			i++;
+			current_line = lines[i];
+		}
 		int within_quotes = 0;
-		if (current_line[strlen(current_line)-1] != ':' && current_line[0] != ';' && strlen(current_line)>1){
-			char segments[10][20];
-			int num_segments = 0;
-			int char_position = 0;
-			int skip = 0;
-			for (int o=0;o<strlen(current_line)+1;o++){
-				skip = 0;
-				if (current_line[o] == ' ' && !within_quotes){
-					skip=1;
-					segments[num_segments][char_position]='\0';
-					num_segments++;
-					char_position=0;
-				}
-				if (current_line[o] == '\"'){
-					skip=1;
-					within_quotes = !within_quotes;
-				}
-				if (!skip){
-					segments[num_segments][char_position]=current_line[o];
-					char_position++;
-				}
+		char segments[10][20];
+		int num_segments = 0;
+		int char_position = 0;
+		int skip = 0;
+		for (int o=0;o<strlen(current_line)+1;o++){
+			skip = 0;
+			if (current_line[o] == ' ' && !within_quotes){
+				skip=1;
+				segments[num_segments][char_position]='\0';
+				num_segments++;
+				char_position=0;
 			}
-			num_segments++;
-			if (!validate_instruction(segments[0])){
+			if (current_line[o] == '\"'){
+				skip=1;
+				within_quotes = !within_quotes;
+			}
+			if (!skip){
+				segments[num_segments][char_position]=current_line[o];
+				char_position++;
+			}
+		}
+		num_segments++;
+		if (!validate_instruction(segments[0])){
+			break;
+		}
+		int first_value = 0;
+		int second_value = 0;
+		switch(lookup_instruction(segments[0])){
+			case MOV:
+				if (is_register_name(segments[1])){
+					move(*lookup_reg(segments[1][0], registers),lookup_reg(segments[2][0], registers));
+				}else{
+					int value = atoi(segments[1]);
+					move(value,lookup_reg(segments[2][0], registers));
+				}
 				break;
-			}
-			int first_value = 0;
-			int second_value = 0;
-			switch(lookup_instruction(segments[0])){
-				case MOV:
-					if (is_register_name(segments[1])){
-						move(*lookup_reg(segments[1][0], registers),lookup_reg(segments[2][0], registers));
-					}else{
-						int value = atoi(segments[1]);
-						move(value,lookup_reg(segments[2][0], registers));
-					}
-					break;
-				case ADD:
-					if (is_register_name(segments[1])){
-						add(*lookup_reg(segments[1][0], registers),lookup_reg(segments[2][0], registers));
-					}else{
-						int value = atoi(segments[1]);
-						add(value,lookup_reg(segments[2][0], registers));
-					}
-					break;
-				case SUB:
-					if (is_register_name(segments[1])){
-						subtract(*lookup_reg(segments[1][0], registers),lookup_reg(segments[2][0], registers));
-					}else{
-						int value = atoi(segments[1]);
-						subtract(value,lookup_reg(segments[2][0], registers));
-					}
-					break;
-				case MUL:
-					if (is_register_name(segments[1])){
-						multiply(*lookup_reg(segments[1][0], registers),lookup_reg(segments[2][0], registers));
-					}else{
-						int value = atoi(segments[1]);
-						multiply(value,lookup_reg(segments[2][0], registers));
-					}
-					break;
-				case DIV:
-					if (is_register_name(segments[1])){
-						divide(*lookup_reg(segments[1][0], registers),lookup_reg(segments[2][0], registers));
-					}else{
-						int value = atoi(segments[1]);
-						divide(value,lookup_reg(segments[2][0], registers));
-					}
-					break;
-				case JMP:
+			case ADD:
+				if (is_register_name(segments[1])){
+					add(*lookup_reg(segments[1][0], registers),lookup_reg(segments[2][0], registers));
+				}else{
+					int value = atoi(segments[1]);
+					add(value,lookup_reg(segments[2][0], registers));
+				}
+				break;
+			case SUB:
+				if (is_register_name(segments[1])){
+					subtract(*lookup_reg(segments[1][0], registers),lookup_reg(segments[2][0], registers));
+				}else{
+					int value = atoi(segments[1]);
+					subtract(value,lookup_reg(segments[2][0], registers));
+				}
+				break;
+			case MUL:
+				if (is_register_name(segments[1])){
+					multiply(*lookup_reg(segments[1][0], registers),lookup_reg(segments[2][0], registers));
+				}else{
+					int value = atoi(segments[1]);
+					multiply(value,lookup_reg(segments[2][0], registers));
+				}
+				break;
+			case DIV:
+				if (is_register_name(segments[1])){
+					divide(*lookup_reg(segments[1][0], registers),lookup_reg(segments[2][0], registers));
+				}else{
+					int value = atoi(segments[1]);
+					divide(value,lookup_reg(segments[2][0], registers));
+				}
+				break;
+			case JMP:
+				if (lookup_label_position(segments[1], labels) >= 0){
+					i--;
+					i=lookup_label_position(segments[1], labels);
+				}
+				break;
+			case CMP:
+				if (is_register_name(segments[1])){
+					first_value = *lookup_reg(segments[1][0], registers);
+				}else{
+					first_value = atoi(segments[1]);
+				}
+				if (is_register_name(segments[2])){
+					second_value = *lookup_reg(segments[2][0], registers);
+				}else{
+					second_value = atoi(segments[2]);
+				}
+				comparison_diff = first_value - second_value;
+				break;
+			case JLT:
+				if (comparison_diff<0){
 					if (lookup_label_position(segments[1], labels) >= 0){
 						i--;
 						i=lookup_label_position(segments[1], labels);
 					}
-					break;
-				case CMP:
-					if (is_register_name(segments[1])){
-						first_value = *lookup_reg(segments[1][0], registers);
+				}
+				break;
+			case JGT:
+				if (comparison_diff>0){
+					if (lookup_label_position(segments[1], labels) >= 0){
+						i--;
+						i=lookup_label_position(segments[1], labels);
+					}
+				}
+				break;
+			case JET:
+				if (comparison_diff==0){
+					if (lookup_label_position(segments[1], labels) >= 0){
+						i--;
+						i=lookup_label_position(segments[1], labels);
+					}
+				}
+				break;
+			case JRO:
+				i--;
+				i+=atoi(segments[1]);
+				break;
+			case MSG:
+				for (int i=1;i<num_segments;i++){
+					if (is_register_name(segments[i])){
+						printf("%d",*lookup_reg(segments[i][0], registers));
 					}else{
-						first_value = atoi(segments[1]);
+						printf("%s",segments[i]);
 					}
-					if (is_register_name(segments[2])){
-						second_value = *lookup_reg(segments[2][0], registers);
-					}else{
-						second_value = atoi(segments[2]);
-					}
-					comparison_diff = first_value - second_value;
-					break;
-				case JLT:
-					if (comparison_diff<0){
-						if (lookup_label_position(segments[1], labels) >= 0){
-							i--;
-							i=lookup_label_position(segments[1], labels);
-						}
-					}
-					break;
-				case JGT:
-					if (comparison_diff>0){
-						if (lookup_label_position(segments[1], labels) >= 0){
-							i--;
-							i=lookup_label_position(segments[1], labels);
-						}
-					}
-					break;
-				case JET:
-					if (comparison_diff==0){
-						if (lookup_label_position(segments[1], labels) >= 0){
-							i--;
-							i=lookup_label_position(segments[1], labels);
-						}
-					}
-					break;
-				case JRO:
-					i--;
-					i+=atoi(segments[1]);
-					break;
-				case MSG:
-					for (int i=1;i<num_segments;i++){
-						if (is_register_name(segments[i])){
-							printf("%d",*lookup_reg(segments[i][0], registers));
-						}else{
-							printf("%s",segments[i]);
-						}
-					}
-					printf("%c",'\n');
-					break;
-			}
+				}
+				printf("%c",'\n');
+				break;
 		}
 	}
 
