@@ -30,14 +30,15 @@ int* lookup_reg(char reg_name, int** registers){
 	return registers[(int)reg_name-97];
 }
 
-Label* lookup_label(char* name, Label** labels){
-	Label* ret_label;
+int lookup_label_position(char* name, Label** labels){
+	int position = -1;
 	for (int i=0;i<50;i++){
 		if (strcmp(labels[i]->name,name)==0){
-			ret_label = labels[i];
+			position = labels[i]->position;
+			break;
 		}
 	}
-	return ret_label;
+	return position;
 }
 
 void interpret(const char* assembly_program){
@@ -51,8 +52,8 @@ void interpret(const char* assembly_program){
 	//initialize all of the label indices
 	for (int i=0;i<50;i++){
 		labels[i] = malloc(sizeof(Label));
-		char empty[50];
-		labels[i]->name=empty;
+		char* name = malloc(30);
+		labels[i]->name=name;
 		labels[i]->position=-1;
 	}
 	int program_length = 1;
@@ -80,6 +81,7 @@ void interpret(const char* assembly_program){
 			for (int o=0;o<strlen(lines[i])-1;o++){
 				labels[num_labels]->name[o]=lines[i][o];
 			}
+			labels[num_labels]->name[strlen(lines[i])] = '\0';
 			labels[num_labels]->position=i;
 			num_labels++;
 		}
@@ -156,13 +158,27 @@ void interpret(const char* assembly_program){
 					break;
 				case JLT:
 					if (comparison_diff<0){
-						i--;
-						i=lookup_label(segments[1], labels)->position;
+						if (lookup_label_position(segments[1], labels) >= 0){
+							i--;
+							i=lookup_label_position(segments[1], labels);
+						}
 					}
 					break;
 				case JGT:
+					if (comparison_diff>0){
+						if (lookup_label_position(segments[1], labels) >= 0){
+							i--;
+							i=lookup_label_position(segments[1], labels);
+						}
+					}
 					break;
 				case JET:
+					if (comparison_diff==0){
+						if (lookup_label_position(segments[1], labels) >= 0){
+							i--;
+							i=lookup_label_position(segments[1], labels);
+						}
+					}
 					break;
 				case JRO:
 					i--;
@@ -188,6 +204,7 @@ void interpret(const char* assembly_program){
 	}
 	//free the memory allocated to the labels
 	for (int i=0;i<50;i++){
+		free(labels[i]->name);
 		free(labels[i]);
 	}
 }
