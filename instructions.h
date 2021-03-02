@@ -2,9 +2,9 @@
 
 #include <string.h>
 
-#define NUM_INSTRUCTIONS 11
+#define NUM_INSTRUCTIONS 12
 
-enum Instruction {MOV,ADD,SUB,MUL,DIV,JMP,CMP,JLT,JGT,JET,MSG};
+enum Instruction {MOV,ADD,SUB,MUL,DIV,JMP,CMP,JLT,JGT,JET,JRO,MSG};
 
 int lookup_instruction(char* instruction_name){
 	int instruction = 0;
@@ -44,6 +44,9 @@ int lookup_instruction(char* instruction_name){
 					break;
 				case 'e':
 					instruction = JET;
+					break;
+				case 'r':
+					instruction = JRO;
 					break;
 			}
 			break;

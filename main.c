@@ -4,7 +4,7 @@
 #include "label.h"
 #include "instructions.h"
 
-char instructions[NUM_INSTRUCTIONS][4]={"mov","add","sub","mul","div","jmp","cmp","jlt","jgt","jet","msg"};
+char instructions[NUM_INSTRUCTIONS][4]={"mov","add","sub","mul","div","jmp","cmp","jlt","jgt","jet","jro","msg"};
 
 int validate_instruction(char* instruction){
 	int valid = 0;
@@ -134,6 +134,10 @@ void interpret(const char* assembly_program){
 				case JGT:
 					break;
 				case JET:
+					break;
+				case JRO:
+					i--;
+					i+=atoi(segments[1]);
 					break;
 				case MSG:
 					for (int i=1;i<num_segments;i++){
