@@ -1,6 +1,5 @@
-#pragma once
-
-#include <string.h>
+#ifndef INSTRUCTIONS_H
+#define INSTRUCTIONS_H
 
 #define NUM_INSTRUCTIONS 12
 
@@ -76,3 +75,5 @@ void divide(int value, int* reg){
 void multiply(int value, int* reg){
 	*reg*=value;
 }
+
+#endif
